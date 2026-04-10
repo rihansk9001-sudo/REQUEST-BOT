@@ -1,8 +1,13 @@
-import os
+import os  # Dhyan rakhein, 'i' chhota hona chahiye
 import asyncio
+import traceback
+import logging
 from pyrogram import Client, filters, idle
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiohttp import web
+
+# Yeh line bot ke andar ki har ek error ko Render logs mein dikhayegi
+logging.basicConfig(level=logging.INFO)
 
 API_ID = 33603340
 API_HASH = "0f1a7f670519f9e44d0d7fdb6aa8efba"
@@ -13,11 +18,7 @@ app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN, in
 # --- NAYA FEATURE: /start Command aur Inline Button ---
 @app.on_message(filters.command("start") & filters.private)
 async def start_command(client, message):
-    # Bot ka username automatically nikalne ke liye
     bot = await client.get_me()
-    
-    # Ye wo special link hai jo direct channel list kholti hai aur admin banati hai
-    # admin=invite_users lagane se wo direct 'Add Subscribers' ki permission mangega
     add_link = f"https://t.me/{bot.username}?startchannel=true&admin=invite_users"
     
     text = (
@@ -27,11 +28,10 @@ async def start_command(client, message):
         "🚀 **Kaise Use Karein:**\n"
         "1. Neeche diye button par click karein.\n"
         "2. Apna Channel select karein.\n"
-        "3. Mujhe **Admin** banayein (Add Subscribers permission ON rakhein).\n"
+        "3. Mujhe **Admin** banayein.\n"
         "4. Channel mein aakar `/acceptall` type karein.\n"
     )
     
-    # Button banana
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("➕ Add Bot To Channel ➕", url=add_link)]
     ])
@@ -52,7 +52,7 @@ async def approve_all_requests(client, message):
         await msg.edit_text(f"❌ Error aaya: {e}")
 
 
-# --- Web Server (Render ke liye) ---
+# --- Web Server (Render ko khush rakhne ke liye) ---
 async def web_server():
     async def handle(request):
         return web.Response(text="Bot is running smoothly on Render!")
@@ -65,16 +65,30 @@ async def web_server():
     port = int(os.environ.get("PORT", 8080))
     site = web.TCPSite(runner, '0.0.0.0', port)
     await site.start()
-    print(f"Web server started on port {port}")
+    logging.info(f"Web server successfully started on port {port}")
 
 
-# --- Bot Start Karne ka Function ---
+# --- Bot Start Karne ka Function (Crash Proofing ke sath) ---
 async def main():
-    await web_server()
-    await app.start()
-    print("Bot Started Successfully! Ab channel mein /acceptall command use karein.")
-    await idle()
-    await app.stop()
+    try:
+        logging.info("Starting Web Server...")
+        await web_server()
+        
+        logging.info("Connecting to Telegram...")
+        await app.start()
+        
+        logging.info("Bot Started Successfully! Ab bot perfectly active hai.")
+        await idle()
+        await app.stop()
+        
+    except Exception as e:
+        print("\n" + "="*50)
+        print(f"❌ BOT CRASH HUA (Asli Error Ye Hai): {e}")
+        traceback.print_exc()
+        print("="*50 + "\n")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        print(f"❌ MAIN LOOP ERROR: {e}")
