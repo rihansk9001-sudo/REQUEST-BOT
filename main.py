@@ -1,15 +1,45 @@
 import os
 import asyncio
 from pyrogram import Client, filters, idle
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiohttp import web
 
-# Aapke variables jo aapne diye hain
-API_ID = 33603340  # Dhyan rakhein, yeh number bina quotes ke hona chahiye
+API_ID = 33603340
 API_HASH = "0f1a7f670519f9e44d0d7fdb6aa8efba"
 BOT_TOKEN = "7874642792:AAF08vl1-qcMUHOIUZrL5IwJS1A7zoD5ucw"
 
-app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN, in_memory=True)
 
+# --- NAYA FEATURE: /start Command aur Inline Button ---
+@app.on_message(filters.command("start") & filters.private)
+async def start_command(client, message):
+    # Bot ka username automatically nikalne ke liye
+    bot = await client.get_me()
+    
+    # Ye wo special link hai jo direct channel list kholti hai aur admin banati hai
+    # admin=invite_users lagane se wo direct 'Add Subscribers' ki permission mangega
+    add_link = f"https://t.me/{bot.username}?startchannel=true&admin=invite_users"
+    
+    text = (
+        f"👋 Hello {message.from_user.first_name}!\n\n"
+        "Main ek **Auto Request Approver Bot** hoon.\n"
+        "Main aapke channel ki saari pending join requests ko ek second mein accept kar sakta hoon.\n\n"
+        "🚀 **Kaise Use Karein:**\n"
+        "1. Neeche diye button par click karein.\n"
+        "2. Apna Channel select karein.\n"
+        "3. Mujhe **Admin** banayein (Add Subscribers permission ON rakhein).\n"
+        "4. Channel mein aakar `/acceptall` type karein.\n"
+    )
+    
+    # Button banana
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("➕ Add Bot To Channel ➕", url=add_link)]
+    ])
+    
+    await message.reply_text(text, reply_markup=keyboard)
+
+
+# --- PURANA FEATURE: /acceptall Command ---
 @app.on_message(filters.command("acceptall") & filters.admin)
 async def approve_all_requests(client, message):
     chat_id = message.chat.id
@@ -21,7 +51,8 @@ async def approve_all_requests(client, message):
     except Exception as e:
         await msg.edit_text(f"❌ Error aaya: {e}")
 
-# --- Render ke liye Dummy Web Server ---
+
+# --- Web Server (Render ke liye) ---
 async def web_server():
     async def handle(request):
         return web.Response(text="Bot is running smoothly on Render!")
@@ -31,13 +62,13 @@ async def web_server():
     runner = web.AppRunner(webapp)
     await runner.setup()
     
-    # Render khud PORT deta hai, agar nahi mila toh 8080 use karega
     port = int(os.environ.get("PORT", 8080))
     site = web.TCPSite(runner, '0.0.0.0', port)
     await site.start()
     print(f"Web server started on port {port}")
 
-# Bot aur server ko ek sath start karne ka sahi tareeqa
+
+# --- Bot Start Karne ka Function ---
 async def main():
     await web_server()
     await app.start()
