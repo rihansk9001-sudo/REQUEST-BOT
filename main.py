@@ -1,27 +1,11 @@
 import os
-import threading
-from pyrogram import Client, filters
-from flask import Flask
+from pyrogram import Client, filters, idle
+from aiohttp import web
 
-# --- Render ke liye Dummy Web Server ---
-web_app = Flask(__name__)
-
-@web_app.route('/')
-def home():
-    return "Bot is running perfectly on Render!"
-
-def run_web():
-    port = int(os.environ.get("PORT", 8080))
-    web_app.run(host="0.0.0.0", port=port)
-
-# Web server ko background mein start karna
-threading.Thread(target=run_web, daemon=True).start()
-# ----------------------------------------
-
-# Aapke variables (Inhe yahan daalein ya Render Environment Variables mein set karein)
-API_ID = "33603340"        # Yahan apna API_ID daalein (Bina quotes ke agar integer hai, par string bhi chalega)
-API_HASH = "0f1a7f670519f9e44d0d7fdb6aa8efba"    # Yahan apna API_HASH daalein
-BOT_TOKEN = "7874642792:AAF08vl1-qcMUHOIUZrL5IwJS1A7zoD5ucw"  # Yahan apna BOT_TOKEN daalein
+# Aapke variables (Yahan apni details daalein)
+API_ID = "33603340"        
+API_HASH = "0f1a7f670519f9e44d0d7fdb6aa8efba"    
+BOT_TOKEN = "7874642792:AAF08vl1-qcMUHOIUZrL5IwJS1A7zoD5ucw"  
 
 app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
@@ -36,6 +20,27 @@ async def approve_all_requests(client, message):
     except Exception as e:
         await msg.edit_text(f"❌ Error aaya: {e}")
 
-# Bot start karna
-print("Bot Started...")
-app.run()
+# --- Render ke liye Naya Async Web Server ---
+async def web_server():
+    async def handle(request):
+        return web.Response(text="Bot is running perfectly on Render with aiohttp!")
+    
+    webapp = web.Application()
+    webapp.router.add_get('/', handle)
+    runner = web.AppRunner(webapp)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    print(f"Web server started on port {port}")
+
+# Bot aur server ko ek sath chalana
+async def main():
+    await web_server()
+    await app.start()
+    print("Bot Started Successfully...")
+    await idle()
+    await app.stop()
+
+if __name__ == "__main__":
+    app.run(main())
