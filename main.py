@@ -1,4 +1,4 @@
-import os  # Dhyan rakhein, 'i' chhota hona chahiye
+import os
 import asyncio
 import traceback
 import logging
@@ -6,7 +6,7 @@ from pyrogram import Client, filters, idle
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiohttp import web
 
-# Yeh line bot ke andar ki har ek error ko Render logs mein dikhayegi
+# Yeh line bot ke andar ki har ek error ko logs mein dikhayegi
 logging.basicConfig(level=logging.INFO)
 
 API_ID = 33603340
@@ -38,7 +38,6 @@ async def start_command(client, message):
     
     await message.reply_text(text, reply_markup=keyboard)
 
-
 # --- PURANA FEATURE: /acceptall Command ---
 @app.on_message(filters.command("acceptall") & filters.admin)
 async def approve_all_requests(client, message):
@@ -51,8 +50,7 @@ async def approve_all_requests(client, message):
     except Exception as e:
         await msg.edit_text(f"❌ Error aaya: {e}")
 
-
-# --- Web Server (Render ko khush rakhne ke liye) ---
+# --- Web Server (Render ko chalte rehne dene ke liye) ---
 async def web_server():
     async def handle(request):
         return web.Response(text="Bot is running smoothly on Render!")
@@ -66,7 +64,6 @@ async def web_server():
     site = web.TCPSite(runner, '0.0.0.0', port)
     await site.start()
     logging.info(f"Web server successfully started on port {port}")
-
 
 # --- Bot Start Karne ka Function (Crash Proofing ke sath) ---
 async def main():
